@@ -11,8 +11,14 @@ cur.executescript('''
 DROP TABLE IF EXISTS Artist;
 DROP TABLE IF EXISTS Album;
 DROP TABLE IF EXISTS Track;
+DROP TABLE IF EXISTS Genre;
 
 CREATE TABLE Artist (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+    name TEXT UNIQUE
+);
+
+CREATE TABLE Genre (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
     name TEXT UNIQUE
 );
@@ -27,6 +33,7 @@ CREATE TABLE Track(
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
     title TEXT UNIQUE,
     album_id INTEGER,
+    genre_id INTEGER,
     len INTEGER, rating INTEGER, count INTEGER
 );
 ''')
@@ -75,12 +82,33 @@ for track in all_tracks:
     length = lookup(track, 'Total Time')
     count = lookup(track, 'Play Count')
     rating = lookup(track, 'Rating')
-
+    genre = lookup(track, 'Genre')
     """
     Manage if there is no track name, artist or album. Cuz I don't want to put
     None in my database
     """
-    if name is None or artist is None or album is None:
+    if name is None or artist is None or album is None or genre is None:
         continue
 
-    print(name, artist, album, length, count, rating)
+    print(name, artist, album, length, count, rating, genre)
+
+    """Adding all the latest variables to their respective tables in the
+    database
+    First, I will add the artist fields and store its id in a variable"""
+    cur.execute("INSERT OR IGNORE INTO Artist (name) VALUES (?)", (artist,))
+    cur.execute("SELECT id FROM Artist WHERE name=?", (artist,))
+    artist_id = cur.fetchone()[0]
+
+    cur.execute("INSERT OR IGNORE INTO Genre (name) VALUES (?)", (genre,))
+    cur.execute("SELECT id FROM Genre WHERE name=?", (genre,))
+    genre_id = cur.fetchone()[0]
+
+    cur.execute("INSERT OR IGNORE INTO Album (artist_id, title) VALUES (?, ?)", (artist_id, album))
+    cur.execute("SELECT id FROM Album WHERE title=?", (album,))
+    album_id = cur.fetchone()[0]
+
+    cur.execute(
+        '''INSERT OR REPLACE INTO Track (title, album_id, genre_id, len, rating, count)
+        VALUES (?, ?, ?, ?, ?, ?)''', (name, album_id, genre_id, length, rating, count))
+
+    conn.commit()
