@@ -31,4 +31,56 @@ CREATE TABLE Track(
 );
 ''')
 
-cur.close()
+# It's time to XML Parsing
+filename = "Library.xml"
+tree = ET.parse(filename)
+
+"""
+I'm going to find all the tracks in his respective dictionary. Those are in
+the third order dictionary
+"""
+all_tracks = tree.findall('dict/dict/dict')
+print('Number of tracks:', len(all_tracks))
+
+"""This is how every third order dict child tags look like:
+<key>Track ID</key><integer>369</integer>
+<key>Name</key><string>Another One Bites The Dust</string>
+<key>Artist</key><string>Queen</string>
+"""
+
+
+def lookup(dictionary, value):
+    """
+    This function will scan all the dictionary and return the content of the
+    'key' tag if the content of that key tag is the same as the function Second
+    parameter 'value'. Else, return None
+    """
+    found = False
+    for child_element in dictionary:
+        if found:
+            return child_element.text
+        if child_element.tag == 'key' and child_element.text == value:
+            found = True
+    return None
+
+
+for track in all_tracks:
+    # If there is no track in the dictionary, continue
+    if lookup(track, 'Track ID') is None:
+        continue
+
+    name = lookup(track, 'Name')
+    artist = lookup(track, 'Artist')
+    album = lookup(track, 'Album')
+    length = lookup(track, 'Total Time')
+    count = lookup(track, 'Play Count')
+    rating = lookup(track, 'Rating')
+
+    """
+    Manage if there is no track name, artist or album. Cuz I don't want to put
+    None in my database
+    """
+    if name is None or artist is None or album is None:
+        continue
+
+    print(name, artist, album, length, count, rating)
